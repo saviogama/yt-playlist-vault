@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: yt-playlist-vault-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: yt_playlist_vault
+      POSTGRES_USER: yt_playlist_vault
+      POSTGRES_PASSWORD: yt_playlist_vault
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
