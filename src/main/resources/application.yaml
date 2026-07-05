@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: yt-playlist-vault
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/yt_playlist_vault
+    username: yt_playlist_vault
+    password: yt_playlist_vault
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
