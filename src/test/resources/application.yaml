@@ -1,7 +1,4 @@
 spring:
-  application:
-    name: yt-playlist-vault
-
   datasource:
     url: jdbc:postgresql://localhost:5432/yt_playlist_vault
     username: yt_playlist_vault
@@ -17,10 +14,5 @@ spring:
       client:
         registration:
           google:
-            client-id: ${GOOGLE_CLIENT_ID}
-            client-secret: ${GOOGLE_CLIENT_SECRET}
-            scope:
-              - openid
-              - email
-              - profile
-              - https://www.googleapis.com/auth/youtube.readonly
+            client-id: test-client-id
+            client-secret: test-client-secret

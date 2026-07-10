@@ -5,5 +5,7 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
+  boolean existsByGoogleSubject(String googleSubject);
+
   Optional<User> findByGoogleSubject(String googleSubject);
 }
