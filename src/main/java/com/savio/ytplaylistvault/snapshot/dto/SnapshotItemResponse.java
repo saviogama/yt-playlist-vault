@@ -6,9 +6,9 @@ import java.util.UUID;
 
 public record SnapshotItemResponse(
     UUID id,
-    String youtubeVideoId,
+    String providerItemId,
     String title,
-    String channelTitle,
+    String creatorName,
     String thumbnailUrl,
     int position,
     Instant addedToPlaylistAt,
@@ -16,9 +16,9 @@ public record SnapshotItemResponse(
   public static SnapshotItemResponse from(SnapshotItem item) {
     return new SnapshotItemResponse(
         item.getId(),
-        item.getYoutubeVideoId(),
+        item.getProviderItemId(),
         item.getTitle(),
-        item.getChannelTitle(),
+        item.getCreatorName(),
         item.getThumbnailUrl(),
         item.getPosition(),
         item.getAddedToPlaylistAt(),

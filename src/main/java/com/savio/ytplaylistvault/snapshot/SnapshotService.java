@@ -5,9 +5,15 @@ import com.savio.ytplaylistvault.playlist.MonitoredPlaylist;
 import com.savio.ytplaylistvault.playlist.MonitoredPlaylistRepository;
 import com.savio.ytplaylistvault.snapshot.dto.CreateSnapshotItemRequest;
 import com.savio.ytplaylistvault.snapshot.dto.CreateSnapshotRequest;
+import com.savio.ytplaylistvault.snapshot.dto.SnapshotDiffItemResponse;
+import com.savio.ytplaylistvault.snapshot.dto.SnapshotDiffResponse;
+import com.savio.ytplaylistvault.snapshot.dto.SnapshotMovedItemResponse;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -74,15 +80,95 @@ public class SnapshotService {
     return new SnapshotWithItems(snapshot, items);
   }
 
+  @Transactional(readOnly = true)
+  public SnapshotDiffResponse diffPreviousSnapshot(UUID snapshotId) {
+    Snapshot currentSnapshot =
+        snapshotRepository
+            .findById(snapshotId)
+            .orElseThrow(() -> new ResourceNotFoundException("Snapshot not found"));
+
+    Snapshot previousSnapshot =
+        snapshotRepository
+            .findFirstByMonitoredPlaylistAndCapturedAtBeforeOrderByCapturedAtDesc(
+                currentSnapshot.getMonitoredPlaylist(), currentSnapshot.getCapturedAt())
+            .orElse(null);
+
+    if (previousSnapshot == null) {
+      return new SnapshotDiffResponse(
+          currentSnapshot.getId(), null, List.of(), List.of(), List.of());
+    }
+
+    List<SnapshotItem> currentItems =
+        snapshotItemRepository.findBySnapshotOrderByPositionAsc(currentSnapshot);
+    List<SnapshotItem> previousItems =
+        snapshotItemRepository.findBySnapshotOrderByPositionAsc(previousSnapshot);
+
+    Map<String, SnapshotItem> currentItemsByProviderItemId = indexByProviderItemId(currentItems);
+    Map<String, SnapshotItem> previousItemsByProviderItemId = indexByProviderItemId(previousItems);
+
+    List<SnapshotDiffItemResponse> addedItems =
+        currentItems.stream()
+            .filter(item -> !previousItemsByProviderItemId.containsKey(item.getProviderItemId()))
+            .map(this::toDiffItemResponse)
+            .toList();
+
+    List<SnapshotDiffItemResponse> removedItems =
+        previousItems.stream()
+            .filter(item -> !currentItemsByProviderItemId.containsKey(item.getProviderItemId()))
+            .map(this::toDiffItemResponse)
+            .toList();
+
+    List<SnapshotMovedItemResponse> movedItems =
+        currentItems.stream()
+            .filter(item -> previousItemsByProviderItemId.containsKey(item.getProviderItemId()))
+            .filter(
+                item ->
+                    previousItemsByProviderItemId.get(item.getProviderItemId()).getPosition()
+                        != item.getPosition())
+            .map(
+                item ->
+                    toMovedItemResponse(
+                        item, previousItemsByProviderItemId.get(item.getProviderItemId())))
+            .toList();
+
+    return new SnapshotDiffResponse(
+        currentSnapshot.getId(), previousSnapshot.getId(), addedItems, removedItems, movedItems);
+  }
+
   private SnapshotItem createSnapshotItem(Snapshot snapshot, CreateSnapshotItemRequest request) {
     return new SnapshotItem(
         snapshot,
-        request.youtubeVideoId(),
+        request.providerItemId(),
         request.title(),
-        request.channelTitle(),
+        request.creatorName(),
         request.thumbnailUrl(),
         request.position(),
         request.addedToPlaylistAt());
+  }
+
+  private Map<String, SnapshotItem> indexByProviderItemId(List<SnapshotItem> items) {
+    return items.stream()
+        .collect(Collectors.toMap(SnapshotItem::getProviderItemId, Function.identity()));
+  }
+
+  private SnapshotDiffItemResponse toDiffItemResponse(SnapshotItem item) {
+    return new SnapshotDiffItemResponse(
+        item.getProviderItemId(),
+        item.getTitle(),
+        item.getCreatorName(),
+        item.getThumbnailUrl(),
+        item.getPosition());
+  }
+
+  private SnapshotMovedItemResponse toMovedItemResponse(
+      SnapshotItem currentItem, SnapshotItem previousItem) {
+    return new SnapshotMovedItemResponse(
+        currentItem.getProviderItemId(),
+        currentItem.getTitle(),
+        currentItem.getCreatorName(),
+        currentItem.getThumbnailUrl(),
+        previousItem.getPosition(),
+        currentItem.getPosition());
   }
 
   public record SnapshotWithItems(Snapshot snapshot, List<SnapshotItem> items) {}

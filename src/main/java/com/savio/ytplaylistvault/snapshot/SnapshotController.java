@@ -2,6 +2,7 @@ package com.savio.ytplaylistvault.snapshot;
 
 import com.savio.ytplaylistvault.snapshot.SnapshotService.SnapshotWithItems;
 import com.savio.ytplaylistvault.snapshot.dto.CreateSnapshotRequest;
+import com.savio.ytplaylistvault.snapshot.dto.SnapshotDiffResponse;
 import com.savio.ytplaylistvault.snapshot.dto.SnapshotResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -47,5 +48,10 @@ public class SnapshotController {
     SnapshotWithItems snapshotWithItems = snapshotService.getSnapshot(snapshotId);
 
     return SnapshotResponse.from(snapshotWithItems.snapshot(), snapshotWithItems.items());
+  }
+
+  @GetMapping("/snapshots/{snapshotId}/diff-previous")
+  public SnapshotDiffResponse diffPreviousSnapshot(@PathVariable UUID snapshotId) {
+    return snapshotService.diffPreviousSnapshot(snapshotId);
   }
 }
