@@ -1,7 +1,7 @@
 package com.savio.ytplaylistvault.error;
 
 public class DuplicateResourceException extends RuntimeException {
-    public DuplicateResourceException(String message) {
-        super(message);
-    }
+  public DuplicateResourceException(String message) {
+    super(message);
+  }
 }
