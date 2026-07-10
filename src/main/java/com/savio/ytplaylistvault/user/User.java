@@ -50,6 +50,11 @@ public class User {
     this.updatedAt = Instant.now();
   }
 
+  public void updateProfile(String email, String displayName) {
+    this.email = email;
+    this.displayName = displayName;
+  }
+
   public UUID getId() {
     return id;
   }

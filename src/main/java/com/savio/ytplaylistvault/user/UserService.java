@@ -26,4 +26,16 @@ public class UserService {
 
     return userRepository.save(user);
   }
+
+  @Transactional
+  public User syncAuthenticatedUser(String googleSubject, String email, String displayName) {
+    return userRepository
+        .findByGoogleSubject(googleSubject)
+        .map(
+            existingUser -> {
+              existingUser.updateProfile(email, displayName);
+              return existingUser;
+            })
+        .orElseGet(() -> userRepository.save(new User(googleSubject, email, displayName)));
+  }
 }
