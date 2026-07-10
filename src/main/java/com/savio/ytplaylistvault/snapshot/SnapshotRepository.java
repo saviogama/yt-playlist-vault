@@ -1,6 +1,7 @@
 package com.savio.ytplaylistvault.snapshot;
 
 import com.savio.ytplaylistvault.playlist.MonitoredPlaylist;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -11,4 +12,7 @@ public interface SnapshotRepository extends JpaRepository<Snapshot, UUID> {
 
   Optional<Snapshot> findFirstByMonitoredPlaylistOrderByCapturedAtDesc(
       MonitoredPlaylist monitoredPlaylist);
+
+  Optional<Snapshot> findFirstByMonitoredPlaylistAndCapturedAtBeforeOrderByCapturedAtDesc(
+      MonitoredPlaylist monitoredPlaylist, Instant capturedAt);
 }
