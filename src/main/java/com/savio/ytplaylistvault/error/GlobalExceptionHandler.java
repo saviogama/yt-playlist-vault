@@ -1,6 +1,8 @@
 package com.savio.ytplaylistvault.error;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -11,37 +13,56 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
   @ExceptionHandler(ResourceNotFoundException.class)
   @ResponseStatus(HttpStatus.NOT_FOUND)
-  public ApiErrorResponse handleResourceNotFound(ResourceNotFoundException exception) {
-    return new ApiErrorResponse(
+  public ApiErrorResponse handleResourceNotFound(
+      ResourceNotFoundException exception, HttpServletRequest request) {
+    return ApiErrorResponse.withoutFields(
         Instant.now(),
         HttpStatus.NOT_FOUND.value(),
         HttpStatus.NOT_FOUND.getReasonPhrase(),
-        exception.getMessage());
+        exception.getMessage(),
+        request.getRequestURI());
   }
 
   @ExceptionHandler(DuplicateResourceException.class)
   @ResponseStatus(HttpStatus.CONFLICT)
-  public ApiErrorResponse handleDuplicateResource(DuplicateResourceException exception) {
-    return new ApiErrorResponse(
+  public ApiErrorResponse handleDuplicateResource(
+      DuplicateResourceException exception, HttpServletRequest request) {
+    return ApiErrorResponse.withoutFields(
         Instant.now(),
         HttpStatus.CONFLICT.value(),
         HttpStatus.CONFLICT.getReasonPhrase(),
-        exception.getMessage());
+        exception.getMessage(),
+        request.getRequestURI());
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
   @ResponseStatus(HttpStatus.BAD_REQUEST)
-  public ApiErrorResponse handleValidationError(MethodArgumentNotValidException exception) {
-    String message =
+  public ApiErrorResponse handleValidationError(
+      MethodArgumentNotValidException exception, HttpServletRequest request) {
+    List<ApiFieldError> fields =
         exception.getBindingResult().getFieldErrors().stream()
-            .findFirst()
-            .map(fieldError -> fieldError.getField() + " " + fieldError.getDefaultMessage())
-            .orElse("Invalid request");
+            .map(
+                fieldError ->
+                    new ApiFieldError(fieldError.getField(), fieldError.getDefaultMessage()))
+            .toList();
 
     return new ApiErrorResponse(
         Instant.now(),
         HttpStatus.BAD_REQUEST.value(),
         HttpStatus.BAD_REQUEST.getReasonPhrase(),
-        message);
+        "Invalid request",
+        request.getRequestURI(),
+        fields);
+  }
+
+  @ExceptionHandler(Exception.class)
+  @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+  public ApiErrorResponse handleUnexpectedError(Exception exception, HttpServletRequest request) {
+    return ApiErrorResponse.withoutFields(
+        Instant.now(),
+        HttpStatus.INTERNAL_SERVER_ERROR.value(),
+        HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+        "Unexpected internal server error",
+        request.getRequestURI());
   }
 }
