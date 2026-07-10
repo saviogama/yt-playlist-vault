@@ -10,12 +10,19 @@ import com.savio.ytplaylistvault.user.UserController;
 import com.savio.ytplaylistvault.user.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.security.oauth2.client.autoconfigure.OAuth2ClientAutoConfiguration;
+import org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(UserController.class)
+@WebMvcTest(
+    value = UserController.class,
+    excludeAutoConfiguration = {
+      OAuth2ClientAutoConfiguration.class,
+      OAuth2ClientWebSecurityAutoConfiguration.class
+    })
 class UserControllerErrorHandlingTest {
   @Autowired private MockMvc mockMvc;
 
