@@ -20,12 +20,12 @@ public class SnapshotItem {
   private Snapshot snapshot;
 
   @Column(nullable = false)
-  private String youtubeVideoId;
+  private String providerItemId;
 
   @Column(nullable = false)
   private String title;
 
-  private String channelTitle;
+  private String creatorName;
 
   private String thumbnailUrl;
 
@@ -42,17 +42,17 @@ public class SnapshotItem {
 
   public SnapshotItem(
       Snapshot snapshot,
-      String youtubeVideoId,
+      String providerItemId,
       String title,
-      String channelTitle,
+      String creatorName,
       String thumbnailUrl,
       int position,
       Instant addedToPlaylistAt) {
     this.id = UUID.randomUUID();
     this.snapshot = snapshot;
-    this.youtubeVideoId = youtubeVideoId;
+    this.providerItemId = providerItemId;
     this.title = title;
-    this.channelTitle = channelTitle;
+    this.creatorName = creatorName;
     this.thumbnailUrl = thumbnailUrl;
     this.position = position;
     this.addedToPlaylistAt = addedToPlaylistAt;
@@ -71,16 +71,16 @@ public class SnapshotItem {
     return snapshot;
   }
 
-  public String getYoutubeVideoId() {
-    return youtubeVideoId;
+  public String getProviderItemId() {
+    return providerItemId;
   }
 
   public String getTitle() {
     return title;
   }
 
-  public String getChannelTitle() {
-    return channelTitle;
+  public String getCreatorName() {
+    return creatorName;
   }
 
   public String getThumbnailUrl() {

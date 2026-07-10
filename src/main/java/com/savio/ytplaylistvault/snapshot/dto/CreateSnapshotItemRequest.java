@@ -6,9 +6,9 @@ import jakarta.validation.constraints.PositiveOrZero;
 import java.time.Instant;
 
 public record CreateSnapshotItemRequest(
-    @NotBlank String youtubeVideoId,
+    @NotBlank String providerItemId,
     @NotBlank String title,
-    String channelTitle,
+    String creatorName,
     String thumbnailUrl,
     @PositiveOrZero int position,
     @NotNull Instant addedToPlaylistAt) {}
