@@ -11,12 +11,17 @@ import com.savio.ytplaylistvault.snapshot.dto.CreateSnapshotRequest;
 import com.savio.ytplaylistvault.snapshot.dto.SnapshotDiffResponse;
 import com.savio.ytplaylistvault.user.User;
 import com.savio.ytplaylistvault.user.UserRepository;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -29,8 +34,12 @@ class SnapshotServiceTest {
 
   @Autowired private MonitoredPlaylistRepository monitoredPlaylistRepository;
 
+  @Autowired private MutableClock clock;
+
   @Test
   void shouldReturnEmptyDiffWhenThereIsNoPreviousSnapshot() {
+    clock.setInstant(Instant.parse("2026-07-10T10:00:00Z"));
+
     MonitoredPlaylist playlist = createPlaylist("1");
 
     SnapshotService.SnapshotWithItems snapshotWithItems =
@@ -57,8 +66,10 @@ class SnapshotServiceTest {
   }
 
   @Test
-  void shouldReturnAddedRemovedAndMovedItemsWhenComparingWithPreviousSnapshot() throws Exception {
+  void shouldReturnAddedRemovedAndMovedItemsWhenComparingWithPreviousSnapshot() {
     MonitoredPlaylist playlist = createPlaylist("2");
+
+    clock.setInstant(Instant.parse("2026-07-10T10:00:00Z"));
 
     SnapshotService.SnapshotWithItems previousSnapshot =
         snapshotService.createSnapshot(
@@ -68,7 +79,7 @@ class SnapshotServiceTest {
                     createItem("track-a", "Track A", "Artist A", 0),
                     createItem("track-b", "Track B", "Artist B", 1))));
 
-    Thread.sleep(10);
+    clock.setInstant(Instant.parse("2026-07-10T10:05:00Z"));
 
     SnapshotService.SnapshotWithItems currentSnapshot =
         snapshotService.createSnapshot(
@@ -131,5 +142,44 @@ class SnapshotServiceTest {
         "https://example.com/" + providerItemId + ".jpg",
         position,
         Instant.parse("2026-07-10T05:00:00Z"));
+  }
+
+  @TestConfiguration
+  static class TestClockConfig {
+
+    @Bean
+    @Primary
+    MutableClock mutableClock() {
+      return new MutableClock(Instant.parse("2026-07-10T00:00:00Z"), ZoneId.of("UTC"));
+    }
+  }
+
+  static class MutableClock extends Clock {
+    private Instant instant;
+    private final ZoneId zone;
+
+    MutableClock(Instant instant, ZoneId zone) {
+      this.instant = instant;
+      this.zone = zone;
+    }
+
+    void setInstant(Instant instant) {
+      this.instant = instant;
+    }
+
+    @Override
+    public ZoneId getZone() {
+      return zone;
+    }
+
+    @Override
+    public Clock withZone(ZoneId zone) {
+      return new MutableClock(instant, zone);
+    }
+
+    @Override
+    public Instant instant() {
+      return instant;
+    }
   }
 }

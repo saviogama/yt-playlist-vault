@@ -8,6 +8,7 @@ import com.savio.ytplaylistvault.snapshot.dto.CreateSnapshotRequest;
 import com.savio.ytplaylistvault.snapshot.dto.SnapshotDiffItemResponse;
 import com.savio.ytplaylistvault.snapshot.dto.SnapshotDiffResponse;
 import com.savio.ytplaylistvault.snapshot.dto.SnapshotMovedItemResponse;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -22,14 +23,17 @@ public class SnapshotService {
   private final SnapshotRepository snapshotRepository;
   private final SnapshotItemRepository snapshotItemRepository;
   private final MonitoredPlaylistRepository monitoredPlaylistRepository;
+  private final Clock clock;
 
   public SnapshotService(
       SnapshotRepository snapshotRepository,
       SnapshotItemRepository snapshotItemRepository,
-      MonitoredPlaylistRepository monitoredPlaylistRepository) {
+      MonitoredPlaylistRepository monitoredPlaylistRepository,
+      Clock clock) {
     this.snapshotRepository = snapshotRepository;
     this.snapshotItemRepository = snapshotItemRepository;
     this.monitoredPlaylistRepository = monitoredPlaylistRepository;
+    this.clock = clock;
   }
 
   private MonitoredPlaylist getPlaylistOrThrow(UUID playlistId) {
@@ -42,7 +46,7 @@ public class SnapshotService {
   public SnapshotWithItems createSnapshot(UUID playlistId, CreateSnapshotRequest request) {
     MonitoredPlaylist playlist = getPlaylistOrThrow(playlistId);
 
-    Snapshot snapshot = new Snapshot(playlist, Instant.now(), request.items().size());
+    Snapshot snapshot = new Snapshot(playlist, Instant.now(clock), request.items().size());
 
     Snapshot savedSnapshot = snapshotRepository.save(snapshot);
 
