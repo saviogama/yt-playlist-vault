@@ -6,8 +6,7 @@ import java.util.UUID;
 
 public record MonitoredPlaylistResponse(
     UUID id,
-    UUID userId,
-    String youtubePlaylistId,
+    String providerPlaylistId,
     String title,
     String description,
     String thumbnailUrl,
@@ -16,8 +15,7 @@ public record MonitoredPlaylistResponse(
   public static MonitoredPlaylistResponse from(MonitoredPlaylist playlist) {
     return new MonitoredPlaylistResponse(
         playlist.getId(),
-        playlist.getUser().getId(),
-        playlist.getYoutubePlaylistId(),
+        playlist.getProviderPlaylistId(),
         playlist.getTitle(),
         playlist.getDescription(),
         playlist.getThumbnailUrl(),
