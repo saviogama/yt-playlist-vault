@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface MonitoredPlaylistRepository extends JpaRepository<MonitoredPlaylist, UUID> {
   List<MonitoredPlaylist> findByUser(User user);
 
-  Optional<MonitoredPlaylist> findByUserAndYoutubePlaylistId(User user, String youtubePlaylistId);
+  Optional<MonitoredPlaylist> findByUserAndProviderPlaylistId(User user, String providerPlaylistId);
 
-  boolean existsByUserAndYoutubePlaylistId(User user, String youtubePlaylistId);
+  boolean existsByUserAndProviderPlaylistId(User user, String providerPlaylistId);
 }

@@ -22,7 +22,7 @@ public class MonitoredPlaylist {
   private User user;
 
   @Column(nullable = false)
-  private String youtubePlaylistId;
+  private String providerPlaylistId;
 
   @Column(nullable = false)
   private String title;
@@ -41,10 +41,10 @@ public class MonitoredPlaylist {
   protected MonitoredPlaylist() {}
 
   public MonitoredPlaylist(
-      User user, String youtubePlaylistId, String title, String description, String thumbnailUrl) {
+      User user, String providerPlaylistId, String title, String description, String thumbnailUrl) {
     this.id = UUID.randomUUID();
     this.user = user;
-    this.youtubePlaylistId = youtubePlaylistId;
+    this.providerPlaylistId = providerPlaylistId;
     this.title = title;
     this.description = description;
     this.thumbnailUrl = thumbnailUrl;
@@ -70,8 +70,8 @@ public class MonitoredPlaylist {
     return user;
   }
 
-  public String getYoutubePlaylistId() {
-    return youtubePlaylistId;
+  public String getProviderPlaylistId() {
+    return providerPlaylistId;
   }
 
   public String getTitle() {
