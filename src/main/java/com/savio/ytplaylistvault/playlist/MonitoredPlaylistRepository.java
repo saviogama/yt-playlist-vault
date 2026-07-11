@@ -11,5 +11,7 @@ public interface MonitoredPlaylistRepository extends JpaRepository<MonitoredPlay
 
   Optional<MonitoredPlaylist> findByUserAndProviderPlaylistId(User user, String providerPlaylistId);
 
+  Optional<MonitoredPlaylist> findByIdAndUser(UUID id, User user);
+
   boolean existsByUserAndProviderPlaylistId(User user, String providerPlaylistId);
 }

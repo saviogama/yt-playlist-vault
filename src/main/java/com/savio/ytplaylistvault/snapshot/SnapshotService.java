@@ -8,6 +8,7 @@ import com.savio.ytplaylistvault.snapshot.dto.CreateSnapshotRequest;
 import com.savio.ytplaylistvault.snapshot.dto.SnapshotDiffItemResponse;
 import com.savio.ytplaylistvault.snapshot.dto.SnapshotDiffResponse;
 import com.savio.ytplaylistvault.snapshot.dto.SnapshotMovedItemResponse;
+import com.savio.ytplaylistvault.user.User;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -42,22 +43,24 @@ public class SnapshotService {
         .orElseThrow(() -> new ResourceNotFoundException("Playlist not found"));
   }
 
+  private MonitoredPlaylist getPlaylistForUserOrThrow(UUID playlistId, User user) {
+    return monitoredPlaylistRepository
+        .findByIdAndUser(playlistId, user)
+        .orElseThrow(() -> new ResourceNotFoundException("Playlist not found"));
+  }
+
+  @Transactional
+  public SnapshotWithItems createSnapshotForUser(
+      User user, UUID playlistId, CreateSnapshotRequest request) {
+    MonitoredPlaylist playlist = getPlaylistForUserOrThrow(playlistId, user);
+
+    return createSnapshot(playlist, request);
+  }
+
   @Transactional
   public SnapshotWithItems createSnapshot(UUID playlistId, CreateSnapshotRequest request) {
     MonitoredPlaylist playlist = getPlaylistOrThrow(playlistId);
-
-    Snapshot snapshot = new Snapshot(playlist, Instant.now(clock), request.items().size());
-
-    Snapshot savedSnapshot = snapshotRepository.save(snapshot);
-
-    List<SnapshotItem> items =
-        request.items().stream()
-            .map(itemRequest -> createSnapshotItem(savedSnapshot, itemRequest))
-            .toList();
-
-    List<SnapshotItem> savedItems = snapshotItemRepository.saveAll(items);
-
-    return new SnapshotWithItems(savedSnapshot, savedItems);
+    return createSnapshot(playlist, request);
   }
 
   @Transactional(readOnly = true)
@@ -173,6 +176,22 @@ public class SnapshotService {
         currentItem.getThumbnailUrl(),
         previousItem.getPosition(),
         currentItem.getPosition());
+  }
+
+  private SnapshotWithItems createSnapshot(
+      MonitoredPlaylist playlist, CreateSnapshotRequest request) {
+    Snapshot snapshot = new Snapshot(playlist, Instant.now(clock), request.items().size());
+
+    Snapshot savedSnapshot = snapshotRepository.save(snapshot);
+
+    List<SnapshotItem> items =
+        request.items().stream()
+            .map(itemRequest -> createSnapshotItem(savedSnapshot, itemRequest))
+            .toList();
+
+    List<SnapshotItem> savedItems = snapshotItemRepository.saveAll(items);
+
+    return new SnapshotWithItems(savedSnapshot, savedItems);
   }
 
   public record SnapshotWithItems(Snapshot snapshot, List<SnapshotItem> items) {}
