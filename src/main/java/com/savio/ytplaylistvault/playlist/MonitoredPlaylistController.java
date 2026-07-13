@@ -2,14 +2,18 @@ package com.savio.ytplaylistvault.playlist;
 
 import com.savio.ytplaylistvault.playlist.dto.CreateMonitoredPlaylistRequest;
 import com.savio.ytplaylistvault.playlist.dto.MonitoredPlaylistResponse;
+import com.savio.ytplaylistvault.playlist.dto.UpdateMonitoringStatusRequest;
 import com.savio.ytplaylistvault.user.User;
 import com.savio.ytplaylistvault.user.UserService;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -48,6 +52,19 @@ public class MonitoredPlaylistController {
     return monitoredPlaylistService.listPlaylists(user).stream()
         .map(MonitoredPlaylistResponse::from)
         .toList();
+  }
+
+  @PatchMapping("/{playlistId}/monitoring-status")
+  public MonitoredPlaylistResponse updateMonitoringStatus(
+      @PathVariable UUID playlistId,
+      @AuthenticationPrincipal OAuth2User oauth2User,
+      @Valid @RequestBody UpdateMonitoringStatusRequest request) {
+    User user = syncAuthenticatedUser(oauth2User);
+
+    MonitoredPlaylist playlist =
+        monitoredPlaylistService.updateMonitoringStatus(user, playlistId, request);
+
+    return MonitoredPlaylistResponse.from(playlist);
   }
 
   private User syncAuthenticatedUser(OAuth2User oauth2User) {

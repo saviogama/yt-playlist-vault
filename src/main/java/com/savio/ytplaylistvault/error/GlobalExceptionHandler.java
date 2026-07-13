@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -53,6 +54,21 @@ public class GlobalExceptionHandler {
         "Invalid request",
         request.getRequestURI(),
         fields);
+  }
+
+  @ExceptionHandler(YoutubeIntegrationException.class)
+  public ResponseEntity<ApiErrorResponse> handleYoutubeIntegrationError(
+      YoutubeIntegrationException exception, HttpServletRequest request) {
+    HttpStatus status = exception.getStatus();
+    ApiErrorResponse response =
+        ApiErrorResponse.withoutFields(
+            Instant.now(),
+            status.value(),
+            status.getReasonPhrase(),
+            exception.getMessage(),
+            request.getRequestURI());
+
+    return ResponseEntity.status(status).body(response);
   }
 
   @ExceptionHandler(Exception.class)

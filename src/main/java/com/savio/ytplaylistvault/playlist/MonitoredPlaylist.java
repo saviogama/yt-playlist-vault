@@ -130,6 +130,10 @@ public class MonitoredPlaylist {
     return snapshotCount;
   }
 
+  public void changeMonitoringStatus(MonitoringStatus monitoringStatus) {
+    this.monitoringStatus = monitoringStatus;
+  }
+
   public void recordCapture(
       Instant checkedAt, boolean createdSnapshot, boolean hadPreviousSnapshot) {
     this.lastCheckedAt = checkedAt;
