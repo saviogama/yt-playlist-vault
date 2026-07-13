@@ -116,6 +116,66 @@ class SnapshotServiceTest {
         .hasMessage("Snapshot not found");
   }
 
+  @Test
+  void shouldListSnapshotsForPlaylistOwnerAndRejectAnotherUser() {
+    MonitoredPlaylist playlist = createPlaylist("owner-list");
+
+    SnapshotService.SnapshotWithItems snapshotWithItems =
+        snapshotService.createSnapshot(
+            playlist.getId(),
+            new CreateSnapshotRequest(List.of(createItem("track-1", "Track 1", "Artist 1", 0))));
+
+    List<SnapshotService.SnapshotWithItems> snapshots =
+        snapshotService.listSnapshotsForUser(playlist.getUser(), playlist.getId());
+
+    assertThat(snapshots).hasSize(1);
+    assertThat(snapshots.getFirst().snapshot().getId())
+        .isEqualTo(snapshotWithItems.snapshot().getId());
+
+    User anotherUser = createPlaylist("another-user-list").getUser();
+
+    assertThatThrownBy(() -> snapshotService.listSnapshotsForUser(anotherUser, playlist.getId()))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessage("Playlist not found");
+  }
+
+  @Test
+  void shouldReturnSnapshotAndDiffForOwnerAndRejectAnotherUser() {
+    MonitoredPlaylist playlist = createPlaylist("owner-snapshot");
+
+    SnapshotService.SnapshotWithItems snapshotWithItems =
+        snapshotService.createSnapshot(
+            playlist.getId(),
+            new CreateSnapshotRequest(List.of(createItem("track-1", "Track 1", "Artist 1", 0))));
+
+    SnapshotService.SnapshotWithItems snapshot =
+        snapshotService.getSnapshotForUser(
+            playlist.getUser(), snapshotWithItems.snapshot().getId());
+    SnapshotDiffResponse diff =
+        snapshotService.diffPreviousSnapshotForUser(
+            playlist.getUser(), snapshotWithItems.snapshot().getId());
+
+    assertThat(snapshot.snapshot().getId()).isEqualTo(snapshotWithItems.snapshot().getId());
+    assertThat(snapshot.items()).hasSize(1);
+    assertThat(diff.snapshotId()).isEqualTo(snapshotWithItems.snapshot().getId());
+    assertThat(diff.previousSnapshotId()).isNull();
+
+    User anotherUser = createPlaylist("another-user-snapshot").getUser();
+
+    assertThatThrownBy(
+            () ->
+                snapshotService.getSnapshotForUser(
+                    anotherUser, snapshotWithItems.snapshot().getId()))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessage("Snapshot not found");
+    assertThatThrownBy(
+            () ->
+                snapshotService.diffPreviousSnapshotForUser(
+                    anotherUser, snapshotWithItems.snapshot().getId()))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessage("Snapshot not found");
+  }
+
   private MonitoredPlaylist createPlaylist(String suffix) {
     User user =
         userRepository.save(
