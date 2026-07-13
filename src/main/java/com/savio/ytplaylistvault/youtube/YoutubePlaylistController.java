@@ -1,6 +1,10 @@
 package com.savio.ytplaylistvault.youtube;
 
 import com.savio.ytplaylistvault.youtube.dto.YoutubePlaylistResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
@@ -11,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+@Tag(name = "YouTube")
 @RestController
 @RequestMapping("/api/youtube/playlists")
 public class YoutubePlaylistController {
@@ -24,6 +29,11 @@ public class YoutubePlaylistController {
     this.youtubePlaylistService = youtubePlaylistService;
   }
 
+  @Operation(summary = "List playlists available from the authenticated YouTube account")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "YouTube playlists returned"),
+    @ApiResponse(responseCode = "403", description = "YouTube authorization is unavailable")
+  })
   @GetMapping
   public List<YoutubePlaylistResponse> listPlaylists(OAuth2AuthenticationToken authentication) {
     OAuth2AuthorizedClient authorizedClient =
