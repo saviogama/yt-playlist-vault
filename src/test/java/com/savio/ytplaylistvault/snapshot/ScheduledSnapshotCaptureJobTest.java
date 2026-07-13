@@ -42,6 +42,10 @@ class ScheduledSnapshotCaptureJobTest {
         .thenReturn(List.of(firstPlaylist, secondPlaylist));
     when(authorizedClientManager.authorize(any(OAuth2AuthorizeRequest.class)))
         .thenReturn(authorizedClient);
+    SnapshotService.SnapshotCaptureResult captureResult =
+        Mockito.mock(SnapshotService.SnapshotCaptureResult.class);
+    when(captureResult.created()).thenReturn(false);
+    when(snapshotCaptureService.captureSnapshot(any(), any(), any())).thenReturn(captureResult);
 
     scheduledSnapshotCaptureJob.captureActivePlaylists();
 

@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.oauth2.client.autoconfigure.OAuth2ClientAutoConfiguration;
 import org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -98,6 +99,31 @@ class UserControllerErrorHandlingTest {
         .andExpect(jsonPath("$.status").value(500))
         .andExpect(jsonPath("$.error").value("Internal Server Error"))
         .andExpect(jsonPath("$.message").value("Unexpected internal server error"))
+        .andExpect(jsonPath("$.path").value("/api/users"))
+        .andExpect(jsonPath("$.fields").isEmpty());
+  }
+
+  @Test
+  void returnsRateLimitErrorForYoutubeIntegrationFailure() throws Exception {
+    when(userService.createUser(any()))
+        .thenThrow(YoutubeIntegrationException.fromStatus(HttpStatus.TOO_MANY_REQUESTS));
+
+    mockMvc
+        .perform(
+            post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "googleSubject": "google-123",
+                      "email": "user@example.com",
+                      "displayName": "User"
+                    }
+                    """))
+        .andExpect(status().isTooManyRequests())
+        .andExpect(jsonPath("$.status").value(429))
+        .andExpect(jsonPath("$.error").value("Too Many Requests"))
+        .andExpect(jsonPath("$.message").value("YouTube rate limit was reached. Try again later"))
         .andExpect(jsonPath("$.path").value("/api/users"))
         .andExpect(jsonPath("$.fields").isEmpty());
   }
