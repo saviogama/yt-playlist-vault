@@ -1,13 +1,17 @@
 package com.savio.ytplaylistvault.youtube;
 
+import com.savio.ytplaylistvault.error.YoutubeIntegrationException;
 import com.savio.ytplaylistvault.youtube.dto.YoutubePlaylistItemResponse;
 import com.savio.ytplaylistvault.youtube.dto.YoutubePlaylistResponse;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.JsonNode;
 
 @Service
@@ -20,19 +24,21 @@ public class YoutubePlaylistService {
 
   public List<YoutubePlaylistResponse> listPlaylists(String accessToken) {
     JsonNode response =
-        restClient
-            .get()
-            .uri(
-                uriBuilder ->
-                    uriBuilder
-                        .path("/playlists")
-                        .queryParam("part", "snippet")
-                        .queryParam("mine", true)
-                        .queryParam("maxResults", 25)
-                        .build())
-            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-            .retrieve()
-            .body(JsonNode.class);
+        getYoutubeResponse(
+            () ->
+                restClient
+                    .get()
+                    .uri(
+                        uriBuilder ->
+                            uriBuilder
+                                .path("/playlists")
+                                .queryParam("part", "snippet")
+                                .queryParam("mine", true)
+                                .queryParam("maxResults", 25)
+                                .build())
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .retrieve()
+                    .body(JsonNode.class));
 
     List<YoutubePlaylistResponse> playlists = new ArrayList<>();
 
@@ -59,26 +65,28 @@ public class YoutubePlaylistService {
       String currentPageToken = pageToken;
 
       JsonNode response =
-          restClient
-              .get()
-              .uri(
-                  uriBuilder -> {
-                    var builder =
-                        uriBuilder
-                            .path("/playlistItems")
-                            .queryParam("part", "snippet")
-                            .queryParam("playlistId", providerPlaylistId)
-                            .queryParam("maxResults", 50);
+          getYoutubeResponse(
+              () ->
+                  restClient
+                      .get()
+                      .uri(
+                          uriBuilder -> {
+                            var builder =
+                                uriBuilder
+                                    .path("/playlistItems")
+                                    .queryParam("part", "snippet")
+                                    .queryParam("playlistId", providerPlaylistId)
+                                    .queryParam("maxResults", 50);
 
-                    if (currentPageToken != null) {
-                      builder.queryParam("pageToken", currentPageToken);
-                    }
+                            if (currentPageToken != null) {
+                              builder.queryParam("pageToken", currentPageToken);
+                            }
 
-                    return builder.build();
-                  })
-              .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-              .retrieve()
-              .body(JsonNode.class);
+                            return builder.build();
+                          })
+                      .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                      .retrieve()
+                      .body(JsonNode.class));
 
       for (JsonNode item : response.path("items")) {
         JsonNode snippet = item.path("snippet");
@@ -99,5 +107,21 @@ public class YoutubePlaylistService {
     } while (pageToken != null);
 
     return playlistItems;
+  }
+
+  private JsonNode getYoutubeResponse(Supplier<JsonNode> request) {
+    try {
+      JsonNode response = request.get();
+
+      if (response == null) {
+        throw YoutubeIntegrationException.unavailable();
+      }
+
+      return response;
+    } catch (RestClientResponseException exception) {
+      throw YoutubeIntegrationException.fromStatus(exception.getStatusCode());
+    } catch (RestClientException exception) {
+      throw YoutubeIntegrationException.unavailable();
+    }
   }
 }
