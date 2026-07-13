@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -22,7 +23,8 @@ public class YoutubePlaylistService {
     this.restClient = restClientBuilder.baseUrl("https://www.googleapis.com/youtube/v3").build();
   }
 
-  public List<YoutubePlaylistResponse> listPlaylists(String accessToken) {
+  @Cacheable(cacheNames = "youtubePlaylists", key = "#googleSubject")
+  public List<YoutubePlaylistResponse> listPlaylists(String googleSubject, String accessToken) {
     JsonNode response =
         getYoutubeResponse(
             () ->
