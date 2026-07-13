@@ -77,6 +77,14 @@ public class SnapshotController {
         .toList();
   }
 
+  @GetMapping("/me/playlists/{playlistId}/latest-diff")
+  public SnapshotDiffResponse diffLatestSnapshotForUser(
+      @PathVariable UUID playlistId, @AuthenticationPrincipal OAuth2User oauth2User) {
+    User user = syncAuthenticatedUser(oauth2User);
+
+    return snapshotService.diffLatestSnapshotForUser(user, playlistId);
+  }
+
   @GetMapping("/me/snapshots/{snapshotId}")
   public SnapshotResponse getSnapshotForUser(
       @PathVariable UUID snapshotId, @AuthenticationPrincipal OAuth2User oauth2User) {
