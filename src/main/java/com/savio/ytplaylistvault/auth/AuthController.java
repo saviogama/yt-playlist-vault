@@ -3,6 +3,9 @@ package com.savio.ytplaylistvault.auth;
 import com.savio.ytplaylistvault.auth.dto.AuthenticatedUserResponse;
 import com.savio.ytplaylistvault.user.User;
 import com.savio.ytplaylistvault.user.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.Set;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "Auth")
 @RestController
 @RequestMapping("/api/me")
 public class AuthController {
@@ -29,6 +33,8 @@ public class AuthController {
     this.userService = userService;
   }
 
+  @Operation(summary = "Get the authenticated user and granted YouTube access")
+  @ApiResponse(responseCode = "200", description = "Authenticated user returned")
   @GetMapping
   public AuthenticatedUserResponse getAuthenticatedUser(
       @AuthenticationPrincipal OAuth2User oauth2User, OAuth2AuthenticationToken authentication) {

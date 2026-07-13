@@ -5,6 +5,12 @@ import com.savio.ytplaylistvault.playlist.dto.MonitoredPlaylistResponse;
 import com.savio.ytplaylistvault.playlist.dto.UpdateMonitoringStatusRequest;
 import com.savio.ytplaylistvault.user.User;
 import com.savio.ytplaylistvault.user.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -20,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "Playlists")
 @RestController
 @RequestMapping("/api/me/playlists")
 public class MonitoredPlaylistController {
@@ -32,6 +39,21 @@ public class MonitoredPlaylistController {
     this.userService = userService;
   }
 
+  @Operation(
+      summary = "Start monitoring a playlist",
+      parameters =
+          @Parameter(
+              name = "X-XSRF-TOKEN",
+              in = ParameterIn.HEADER,
+              required = true,
+              description =
+                  "CSRF token returned by GET /api/csrf. Required for state-changing requests."))
+  @ApiResponses({
+    @ApiResponse(responseCode = "201", description = "Playlist is now monitored"),
+    @ApiResponse(
+        responseCode = "409",
+        description = "Playlist is already monitored by the authenticated user")
+  })
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
   public MonitoredPlaylistResponse createPlaylist(
@@ -44,6 +66,8 @@ public class MonitoredPlaylistController {
     return MonitoredPlaylistResponse.from(playlist);
   }
 
+  @Operation(summary = "List monitored playlists")
+  @ApiResponse(responseCode = "200", description = "Monitored playlists returned")
   @GetMapping
   public List<MonitoredPlaylistResponse> listPlaylists(
       @AuthenticationPrincipal OAuth2User oauth2User) {
@@ -54,6 +78,19 @@ public class MonitoredPlaylistController {
         .toList();
   }
 
+  @Operation(
+      summary = "Change playlist monitoring status",
+      parameters =
+          @Parameter(
+              name = "X-XSRF-TOKEN",
+              in = ParameterIn.HEADER,
+              required = true,
+              description =
+                  "CSRF token returned by GET /api/csrf. Required for state-changing requests."))
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "Monitoring status updated"),
+    @ApiResponse(responseCode = "404", description = "Playlist not found")
+  })
   @PatchMapping("/{playlistId}/monitoring-status")
   public MonitoredPlaylistResponse updateMonitoringStatus(
       @PathVariable UUID playlistId,
