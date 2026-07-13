@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface MonitoredPlaylistRepository extends JpaRepository<MonitoredPlaylist, UUID> {
   List<MonitoredPlaylist> findByUser(User user);
 
+  List<MonitoredPlaylist> findByMonitoringStatus(MonitoringStatus monitoringStatus);
+
   Optional<MonitoredPlaylist> findByUserAndProviderPlaylistId(User user, String providerPlaylistId);
 
   Optional<MonitoredPlaylist> findByIdAndUser(UUID id, User user);
