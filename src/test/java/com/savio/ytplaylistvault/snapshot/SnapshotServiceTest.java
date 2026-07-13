@@ -220,6 +220,53 @@ class SnapshotServiceTest {
         .hasMessage("No snapshots found for this playlist");
   }
 
+  @Test
+  void shouldReuseLatestSnapshotWhenPlaylistContentIsUnchanged() {
+    MonitoredPlaylist playlist = createPlaylist("unchanged");
+    CreateSnapshotRequest request =
+        new CreateSnapshotRequest(
+            List.of(
+                createItem("playlist-item-1", "Track 1", "Artist 1", 0),
+                createItem("playlist-item-2", "Track 2", "Artist 2", 1)));
+
+    SnapshotService.SnapshotWithItems existingSnapshot =
+        snapshotService.createSnapshot(playlist.getId(), request);
+    SnapshotService.SnapshotCaptureResult captureResult =
+        snapshotService.createSnapshotIfChanged(playlist, request);
+
+    assertThat(captureResult.created()).isFalse();
+    assertThat(captureResult.snapshotWithItems().snapshot().getId())
+        .isEqualTo(existingSnapshot.snapshot().getId());
+    assertThat(snapshotService.listSnapshotsForUser(playlist.getUser(), playlist.getId()))
+        .hasSize(1);
+  }
+
+  @Test
+  void shouldCreateNewSnapshotWhenPlaylistOrderChanges() {
+    MonitoredPlaylist playlist = createPlaylist("changed-order");
+    CreateSnapshotRequest initialRequest =
+        new CreateSnapshotRequest(
+            List.of(
+                createItem("playlist-item-1", "Track 1", "Artist 1", 0),
+                createItem("playlist-item-2", "Track 2", "Artist 2", 1)));
+    SnapshotService.SnapshotWithItems existingSnapshot =
+        snapshotService.createSnapshot(playlist.getId(), initialRequest);
+    CreateSnapshotRequest reorderedRequest =
+        new CreateSnapshotRequest(
+            List.of(
+                createItem("playlist-item-2", "Track 2", "Artist 2", 0),
+                createItem("playlist-item-1", "Track 1", "Artist 1", 1)));
+
+    SnapshotService.SnapshotCaptureResult captureResult =
+        snapshotService.createSnapshotIfChanged(playlist, reorderedRequest);
+
+    assertThat(captureResult.created()).isTrue();
+    assertThat(captureResult.snapshotWithItems().snapshot().getId())
+        .isNotEqualTo(existingSnapshot.snapshot().getId());
+    assertThat(snapshotService.listSnapshotsForUser(playlist.getUser(), playlist.getId()))
+        .hasSize(2);
+  }
+
   private MonitoredPlaylist createPlaylist(String suffix) {
     User user =
         userRepository.save(
