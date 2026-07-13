@@ -37,6 +37,13 @@ public class SnapshotService {
     this.clock = clock;
   }
 
+  private Snapshot getSnapshotForUserOrThrow(UUID snapshotId, User user) {
+    return snapshotRepository
+        .findById(snapshotId)
+        .filter(snapshot -> snapshot.getMonitoredPlaylist().getUser().getId().equals(user.getId()))
+        .orElseThrow(() -> new ResourceNotFoundException("Snapshot not found"));
+  }
+
   private MonitoredPlaylist getPlaylistOrThrow(UUID playlistId) {
     return monitoredPlaylistRepository
         .findById(playlistId)
@@ -140,6 +147,34 @@ public class SnapshotService {
 
     return new SnapshotDiffResponse(
         currentSnapshot.getId(), previousSnapshot.getId(), addedItems, removedItems, movedItems);
+  }
+
+  @Transactional(readOnly = true)
+  public List<SnapshotWithItems> listSnapshotsForUser(User user, UUID playlistId) {
+    MonitoredPlaylist playlist = getPlaylistForUserOrThrow(playlistId, user);
+
+    return snapshotRepository.findByMonitoredPlaylistOrderByCapturedAtDesc(playlist).stream()
+        .map(
+            snapshot ->
+                new SnapshotWithItems(
+                    snapshot, snapshotItemRepository.findBySnapshotOrderByPositionAsc(snapshot)))
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public SnapshotWithItems getSnapshotForUser(User user, UUID snapshotId) {
+    Snapshot snapshot = getSnapshotForUserOrThrow(snapshotId, user);
+
+    List<SnapshotItem> items = snapshotItemRepository.findBySnapshotOrderByPositionAsc(snapshot);
+
+    return new SnapshotWithItems(snapshot, items);
+  }
+
+  @Transactional(readOnly = true)
+  public SnapshotDiffResponse diffPreviousSnapshotForUser(User user, UUID snapshotId) {
+    getSnapshotForUserOrThrow(snapshotId, user);
+
+    return diffPreviousSnapshot(snapshotId);
   }
 
   private SnapshotItem createSnapshotItem(Snapshot snapshot, CreateSnapshotItemRequest request) {
