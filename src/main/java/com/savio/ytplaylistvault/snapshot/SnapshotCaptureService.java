@@ -3,7 +3,7 @@ package com.savio.ytplaylistvault.snapshot;
 import com.savio.ytplaylistvault.error.ResourceNotFoundException;
 import com.savio.ytplaylistvault.playlist.MonitoredPlaylist;
 import com.savio.ytplaylistvault.playlist.MonitoredPlaylistRepository;
-import com.savio.ytplaylistvault.snapshot.SnapshotService.SnapshotWithItems;
+import com.savio.ytplaylistvault.snapshot.SnapshotService.SnapshotCaptureResult;
 import com.savio.ytplaylistvault.snapshot.dto.CreateSnapshotItemRequest;
 import com.savio.ytplaylistvault.snapshot.dto.CreateSnapshotRequest;
 import com.savio.ytplaylistvault.user.User;
@@ -30,7 +30,7 @@ public class SnapshotCaptureService {
   }
 
   @Transactional
-  public SnapshotWithItems captureSnapshot(User user, UUID playlistId, String accessToken) {
+  public SnapshotCaptureResult captureSnapshot(User user, UUID playlistId, String accessToken) {
     MonitoredPlaylist playlist =
         monitoredPlaylistRepository
             .findByIdAndUser(playlistId, user)
@@ -43,7 +43,7 @@ public class SnapshotCaptureService {
         new CreateSnapshotRequest(
             youtubeItems.stream().map(this::toCreateSnapshotItemRequest).toList());
 
-    return snapshotService.createSnapshotForUser(user, playlistId, request);
+    return snapshotService.createSnapshotIfChanged(playlist, request);
   }
 
   private CreateSnapshotItemRequest toCreateSnapshotItemRequest(

@@ -9,8 +9,10 @@ import com.savio.ytplaylistvault.snapshot.dto.SnapshotDiffResponse;
 import com.savio.ytplaylistvault.user.User;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.IntStream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,14 +54,6 @@ public class SnapshotService {
     return monitoredPlaylistRepository
         .findByIdAndUser(playlistId, user)
         .orElseThrow(() -> new ResourceNotFoundException("Playlist not found"));
-  }
-
-  @Transactional
-  public SnapshotWithItems createSnapshotForUser(
-      User user, UUID playlistId, CreateSnapshotRequest request) {
-    MonitoredPlaylist playlist = getPlaylistForUserOrThrow(playlistId, user);
-
-    return createSnapshot(playlist, request);
   }
 
   @Transactional
@@ -159,6 +153,24 @@ public class SnapshotService {
     return diffPreviousSnapshot(latestSnapshot.getId());
   }
 
+  @Transactional
+  public SnapshotCaptureResult createSnapshotIfChanged(
+      MonitoredPlaylist playlist, CreateSnapshotRequest request) {
+    Snapshot latestSnapshot =
+        snapshotRepository.findFirstByMonitoredPlaylistOrderByCapturedAtDesc(playlist).orElse(null);
+
+    if (latestSnapshot != null) {
+      List<SnapshotItem> latestItems =
+          snapshotItemRepository.findBySnapshotOrderByPositionAsc(latestSnapshot);
+
+      if (hasSameContent(latestItems, request.items())) {
+        return new SnapshotCaptureResult(new SnapshotWithItems(latestSnapshot, latestItems), false);
+      }
+    }
+
+    return new SnapshotCaptureResult(createSnapshot(playlist, request), true);
+  }
+
   private SnapshotItem createSnapshotItem(Snapshot snapshot, CreateSnapshotItemRequest request) {
     return new SnapshotItem(
         snapshot,
@@ -168,6 +180,28 @@ public class SnapshotService {
         request.thumbnailUrl(),
         request.position(),
         request.addedToPlaylistAt());
+  }
+
+  private boolean hasSameContent(
+      List<SnapshotItem> snapshotItems, List<CreateSnapshotItemRequest> requestedItems) {
+    if (snapshotItems.size() != requestedItems.size()) {
+      return false;
+    }
+
+    List<CreateSnapshotItemRequest> requestedItemsByPosition =
+        requestedItems.stream()
+            .sorted(Comparator.comparingInt(CreateSnapshotItemRequest::position))
+            .toList();
+
+    return IntStream.range(0, snapshotItems.size())
+        .allMatch(
+            index -> {
+              SnapshotItem snapshotItem = snapshotItems.get(index);
+              CreateSnapshotItemRequest requestedItem = requestedItemsByPosition.get(index);
+
+              return snapshotItem.getProviderItemId().equals(requestedItem.providerItemId())
+                  && snapshotItem.getPosition() == requestedItem.position();
+            });
   }
 
   private SnapshotWithItems createSnapshot(
@@ -187,4 +221,6 @@ public class SnapshotService {
   }
 
   public record SnapshotWithItems(Snapshot snapshot, List<SnapshotItem> items) {}
+
+  public record SnapshotCaptureResult(SnapshotWithItems snapshotWithItems, boolean created) {}
 }
