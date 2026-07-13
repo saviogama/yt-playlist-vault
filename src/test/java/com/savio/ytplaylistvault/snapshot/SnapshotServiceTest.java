@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.savio.ytplaylistvault.error.ResourceNotFoundException;
 import com.savio.ytplaylistvault.playlist.MonitoredPlaylist;
 import com.savio.ytplaylistvault.playlist.MonitoredPlaylistRepository;
+import com.savio.ytplaylistvault.playlist.MonitoringStatus;
 import com.savio.ytplaylistvault.snapshot.dto.CreateSnapshotItemRequest;
 import com.savio.ytplaylistvault.snapshot.dto.CreateSnapshotRequest;
 import com.savio.ytplaylistvault.snapshot.dto.SnapshotDiffResponse;
@@ -229,16 +230,24 @@ class SnapshotServiceTest {
                 createItem("playlist-item-1", "Track 1", "Artist 1", 0),
                 createItem("playlist-item-2", "Track 2", "Artist 2", 1)));
 
-    SnapshotService.SnapshotWithItems existingSnapshot =
-        snapshotService.createSnapshot(playlist.getId(), request);
+    clock.setInstant(Instant.parse("2026-07-10T10:00:00Z"));
+    SnapshotService.SnapshotCaptureResult initialCapture =
+        snapshotService.createSnapshotIfChanged(playlist, request);
+
+    clock.setInstant(Instant.parse("2026-07-10T10:05:00Z"));
     SnapshotService.SnapshotCaptureResult captureResult =
         snapshotService.createSnapshotIfChanged(playlist, request);
 
     assertThat(captureResult.created()).isFalse();
     assertThat(captureResult.snapshotWithItems().snapshot().getId())
-        .isEqualTo(existingSnapshot.snapshot().getId());
+        .isEqualTo(initialCapture.snapshotWithItems().snapshot().getId());
     assertThat(snapshotService.listSnapshotsForUser(playlist.getUser(), playlist.getId()))
         .hasSize(1);
+    assertThat(playlist.getMonitoringStatus()).isEqualTo(MonitoringStatus.ACTIVE);
+    assertThat(playlist.getSnapshotCount()).isEqualTo(1);
+    assertThat(playlist.getLastCheckedAt()).isEqualTo(Instant.parse("2026-07-10T10:05:00Z"));
+    assertThat(playlist.getLastSnapshotAt()).isEqualTo(Instant.parse("2026-07-10T10:00:00Z"));
+    assertThat(playlist.getLastChangeDetectedAt()).isNull();
   }
 
   @Test
@@ -249,22 +258,28 @@ class SnapshotServiceTest {
             List.of(
                 createItem("playlist-item-1", "Track 1", "Artist 1", 0),
                 createItem("playlist-item-2", "Track 2", "Artist 2", 1)));
-    SnapshotService.SnapshotWithItems existingSnapshot =
-        snapshotService.createSnapshot(playlist.getId(), initialRequest);
+    clock.setInstant(Instant.parse("2026-07-10T10:00:00Z"));
+    SnapshotService.SnapshotCaptureResult initialCapture =
+        snapshotService.createSnapshotIfChanged(playlist, initialRequest);
     CreateSnapshotRequest reorderedRequest =
         new CreateSnapshotRequest(
             List.of(
                 createItem("playlist-item-2", "Track 2", "Artist 2", 0),
                 createItem("playlist-item-1", "Track 1", "Artist 1", 1)));
 
+    clock.setInstant(Instant.parse("2026-07-10T10:05:00Z"));
     SnapshotService.SnapshotCaptureResult captureResult =
         snapshotService.createSnapshotIfChanged(playlist, reorderedRequest);
 
     assertThat(captureResult.created()).isTrue();
     assertThat(captureResult.snapshotWithItems().snapshot().getId())
-        .isNotEqualTo(existingSnapshot.snapshot().getId());
+        .isNotEqualTo(initialCapture.snapshotWithItems().snapshot().getId());
     assertThat(snapshotService.listSnapshotsForUser(playlist.getUser(), playlist.getId()))
         .hasSize(2);
+    assertThat(playlist.getSnapshotCount()).isEqualTo(2);
+    assertThat(playlist.getLastCheckedAt()).isEqualTo(Instant.parse("2026-07-10T10:05:00Z"));
+    assertThat(playlist.getLastSnapshotAt()).isEqualTo(Instant.parse("2026-07-10T10:05:00Z"));
+    assertThat(playlist.getLastChangeDetectedAt()).isEqualTo(Instant.parse("2026-07-10T10:05:00Z"));
   }
 
   private MonitoredPlaylist createPlaylist(String suffix) {

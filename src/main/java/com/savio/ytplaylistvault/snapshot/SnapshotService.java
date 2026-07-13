@@ -59,7 +59,7 @@ public class SnapshotService {
   @Transactional
   public SnapshotWithItems createSnapshot(UUID playlistId, CreateSnapshotRequest request) {
     MonitoredPlaylist playlist = getPlaylistOrThrow(playlistId);
-    return createSnapshot(playlist, request);
+    return createSnapshot(playlist, request, Instant.now(clock));
   }
 
   @Transactional(readOnly = true)
@@ -156,6 +156,7 @@ public class SnapshotService {
   @Transactional
   public SnapshotCaptureResult createSnapshotIfChanged(
       MonitoredPlaylist playlist, CreateSnapshotRequest request) {
+    Instant checkedAt = Instant.now(clock);
     Snapshot latestSnapshot =
         snapshotRepository.findFirstByMonitoredPlaylistOrderByCapturedAtDesc(playlist).orElse(null);
 
@@ -164,11 +165,15 @@ public class SnapshotService {
           snapshotItemRepository.findBySnapshotOrderByPositionAsc(latestSnapshot);
 
       if (hasSameContent(latestItems, request.items())) {
+        playlist.recordCapture(checkedAt, false, true);
         return new SnapshotCaptureResult(new SnapshotWithItems(latestSnapshot, latestItems), false);
       }
     }
 
-    return new SnapshotCaptureResult(createSnapshot(playlist, request), true);
+    SnapshotWithItems snapshotWithItems = createSnapshot(playlist, request, checkedAt);
+    playlist.recordCapture(checkedAt, true, latestSnapshot != null);
+
+    return new SnapshotCaptureResult(snapshotWithItems, true);
   }
 
   private SnapshotItem createSnapshotItem(Snapshot snapshot, CreateSnapshotItemRequest request) {
@@ -205,8 +210,8 @@ public class SnapshotService {
   }
 
   private SnapshotWithItems createSnapshot(
-      MonitoredPlaylist playlist, CreateSnapshotRequest request) {
-    Snapshot snapshot = new Snapshot(playlist, Instant.now(clock), request.items().size());
+      MonitoredPlaylist playlist, CreateSnapshotRequest request, Instant capturedAt) {
+    Snapshot snapshot = new Snapshot(playlist, capturedAt, request.items().size());
 
     Snapshot savedSnapshot = snapshotRepository.save(snapshot);
 
