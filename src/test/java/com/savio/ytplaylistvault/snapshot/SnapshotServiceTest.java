@@ -176,6 +176,50 @@ class SnapshotServiceTest {
         .hasMessage("Snapshot not found");
   }
 
+  @Test
+  void shouldReturnDiffForLatestSnapshotOfPlaylistOwner() {
+    MonitoredPlaylist playlist = createPlaylist("latest-diff");
+
+    clock.setInstant(Instant.parse("2026-07-10T10:00:00Z"));
+    SnapshotService.SnapshotWithItems previousSnapshot =
+        snapshotService.createSnapshot(
+            playlist.getId(),
+            new CreateSnapshotRequest(
+                List.of(createItem("playlist-item-1", "Track 1", "Artist 1", 0))));
+
+    clock.setInstant(Instant.parse("2026-07-10T10:05:00Z"));
+    SnapshotService.SnapshotWithItems latestSnapshot =
+        snapshotService.createSnapshot(
+            playlist.getId(),
+            new CreateSnapshotRequest(
+                List.of(createItem("playlist-item-2", "Track 2", "Artist 2", 0))));
+
+    SnapshotDiffResponse diff =
+        snapshotService.diffLatestSnapshotForUser(playlist.getUser(), playlist.getId());
+
+    assertThat(diff.snapshotId()).isEqualTo(latestSnapshot.snapshot().getId());
+    assertThat(diff.previousSnapshotId()).isEqualTo(previousSnapshot.snapshot().getId());
+    assertThat(diff.addedItems())
+        .singleElement()
+        .extracting(item -> item.providerItemId())
+        .isEqualTo("playlist-item-2");
+    assertThat(diff.removedItems())
+        .singleElement()
+        .extracting(item -> item.providerItemId())
+        .isEqualTo("playlist-item-1");
+    assertThat(diff.movedItems()).isEmpty();
+  }
+
+  @Test
+  void shouldThrowWhenPlaylistHasNoSnapshots() {
+    MonitoredPlaylist playlist = createPlaylist("no-snapshots");
+
+    assertThatThrownBy(
+            () -> snapshotService.diffLatestSnapshotForUser(playlist.getUser(), playlist.getId()))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessage("No snapshots found for this playlist");
+  }
+
   private MonitoredPlaylist createPlaylist(String suffix) {
     User user =
         userRepository.save(
