@@ -17,6 +17,12 @@ spring:
             client-id: test-client-id
             client-secret: test-client-secret
 
+  rabbitmq:
+    dynamic: false
+    listener:
+      simple:
+        auto-startup: false
+
 app:
   snapshot-scheduler:
     enabled: false

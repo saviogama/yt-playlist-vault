@@ -10,6 +10,19 @@ services:
       POSTGRES_PASSWORD: yt_playlist_vault
     volumes:
       - postgres_data:/var/lib/postgresql/data
+  rabbitmq:
+    image: rabbitmq:4.3.2-management
+    container_name: yt-playlist-vault-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: yt_playlist_vault
+      RABBITMQ_DEFAULT_PASS: yt_playlist_vault
+      RABBITMQ_DEFAULT_VHOST: yt_playlist_vault
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
 
 volumes:
   postgres_data:
+  rabbitmq_data:

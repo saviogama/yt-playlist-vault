@@ -1,81 +1,58 @@
 package com.savio.ytplaylistvault.snapshot;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.savio.ytplaylistvault.playlist.MonitoredPlaylist;
 import com.savio.ytplaylistvault.playlist.MonitoredPlaylistRepository;
 import com.savio.ytplaylistvault.playlist.MonitoringStatus;
+import com.savio.ytplaylistvault.snapshot.messaging.SnapshotCaptureMessagePublisher;
 import com.savio.ytplaylistvault.user.User;
-import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
-import org.springframework.security.oauth2.core.OAuth2AccessToken;
 
 class ScheduledSnapshotCaptureJobTest {
 
   private final MonitoredPlaylistRepository monitoredPlaylistRepository =
       Mockito.mock(MonitoredPlaylistRepository.class);
-  private final SnapshotCaptureService snapshotCaptureService =
-      Mockito.mock(SnapshotCaptureService.class);
-  private final OAuth2AuthorizedClientManager authorizedClientManager =
-      Mockito.mock(OAuth2AuthorizedClientManager.class);
+  private final SnapshotCaptureMessagePublisher snapshotCaptureMessagePublisher =
+      Mockito.mock(SnapshotCaptureMessagePublisher.class);
   private final ScheduledSnapshotCaptureJob scheduledSnapshotCaptureJob =
-      new ScheduledSnapshotCaptureJob(
-          monitoredPlaylistRepository, snapshotCaptureService, authorizedClientManager);
+      new ScheduledSnapshotCaptureJob(monitoredPlaylistRepository, snapshotCaptureMessagePublisher);
 
   @Test
-  void capturesAllActivePlaylistsWithOneAuthorizationPerUser() {
+  void queuesEveryActivePlaylist() {
     User user = new User("google-123", "user@example.com", "Test User");
     MonitoredPlaylist firstPlaylist = playlist(user, "first");
     MonitoredPlaylist secondPlaylist = playlist(user, "second");
-    OAuth2AuthorizedClient authorizedClient = authorizedClient();
 
     when(monitoredPlaylistRepository.findByMonitoringStatus(MonitoringStatus.ACTIVE))
         .thenReturn(List.of(firstPlaylist, secondPlaylist));
-    when(authorizedClientManager.authorize(any(OAuth2AuthorizeRequest.class)))
-        .thenReturn(authorizedClient);
-    SnapshotService.SnapshotCaptureResult captureResult =
-        Mockito.mock(SnapshotService.SnapshotCaptureResult.class);
-    when(captureResult.created()).thenReturn(false);
-    when(snapshotCaptureService.captureSnapshot(any(), any(), any())).thenReturn(captureResult);
 
-    scheduledSnapshotCaptureJob.captureActivePlaylists();
+    scheduledSnapshotCaptureJob.enqueueActivePlaylists();
 
-    ArgumentCaptor<OAuth2AuthorizeRequest> authorizeRequestCaptor =
-        ArgumentCaptor.forClass(OAuth2AuthorizeRequest.class);
-    verify(authorizedClientManager).authorize(authorizeRequestCaptor.capture());
-    verify(snapshotCaptureService)
-        .captureSnapshot(
-            user, firstPlaylist.getId(), authorizedClient.getAccessToken().getTokenValue());
-    verify(snapshotCaptureService)
-        .captureSnapshot(
-            user, secondPlaylist.getId(), authorizedClient.getAccessToken().getTokenValue());
-
-    OAuth2AuthorizeRequest authorizeRequest = authorizeRequestCaptor.getValue();
-    org.assertj.core.api.Assertions.assertThat(authorizeRequest.getPrincipal().getName())
-        .isEqualTo(user.getGoogleSubject());
+    verify(snapshotCaptureMessagePublisher).publish(firstPlaylist.getId());
+    verify(snapshotCaptureMessagePublisher).publish(secondPlaylist.getId());
   }
 
   @Test
-  void skipsUserPlaylistsWhenAuthorizationIsUnavailable() {
+  void continuesQueuingWhenOnePlaylistFails() {
     User user = new User("google-123", "user@example.com", "Test User");
-    MonitoredPlaylist playlist = playlist(user, "only");
+    MonitoredPlaylist firstPlaylist = playlist(user, "first");
+    MonitoredPlaylist secondPlaylist = playlist(user, "second");
 
     when(monitoredPlaylistRepository.findByMonitoringStatus(MonitoringStatus.ACTIVE))
-        .thenReturn(List.of(playlist));
-    when(authorizedClientManager.authorize(any(OAuth2AuthorizeRequest.class))).thenReturn(null);
+        .thenReturn(List.of(firstPlaylist, secondPlaylist));
+    doThrow(new RuntimeException("RabbitMQ unavailable"))
+        .when(snapshotCaptureMessagePublisher)
+        .publish(firstPlaylist.getId());
 
-    scheduledSnapshotCaptureJob.captureActivePlaylists();
+    scheduledSnapshotCaptureJob.enqueueActivePlaylists();
 
-    verify(snapshotCaptureService, never()).captureSnapshot(any(), any(), any());
+    verify(snapshotCaptureMessagePublisher).publish(firstPlaylist.getId());
+    verify(snapshotCaptureMessagePublisher).publish(secondPlaylist.getId());
   }
 
   private MonitoredPlaylist playlist(User user, String suffix) {
@@ -85,17 +62,5 @@ class ScheduledSnapshotCaptureJobTest {
         "Playlist " + suffix,
         "Playlist used by ScheduledSnapshotCaptureJobTest",
         "https://example.com/playlist.jpg");
-  }
-
-  private OAuth2AuthorizedClient authorizedClient() {
-    OAuth2AuthorizedClient authorizedClient = Mockito.mock(OAuth2AuthorizedClient.class);
-    OAuth2AccessToken accessToken =
-        new OAuth2AccessToken(
-            OAuth2AccessToken.TokenType.BEARER,
-            "access-token",
-            Instant.parse("2026-07-13T00:00:00Z"),
-            Instant.parse("2026-07-13T01:00:00Z"));
-    when(authorizedClient.getAccessToken()).thenReturn(accessToken);
-    return authorizedClient;
   }
 }
