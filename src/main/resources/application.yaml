@@ -25,6 +25,17 @@ spring:
               - profile
               - https://www.googleapis.com/auth/youtube.readonly
 
+  rabbitmq:
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          initial-interval: 1s
+          multiplier: 2
+          max-interval: 10s
+          max-retries: 3
+
 app:
   snapshot-scheduler:
     enabled: true
