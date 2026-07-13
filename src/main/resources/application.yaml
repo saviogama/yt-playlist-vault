@@ -24,3 +24,9 @@ spring:
               - email
               - profile
               - https://www.googleapis.com/auth/youtube.readonly
+
+app:
+  snapshot-scheduler:
+    enabled: true
+    fixed-delay: PT72H
+    initial-delay: PT1M
