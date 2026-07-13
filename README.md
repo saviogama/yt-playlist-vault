@@ -13,34 +13,35 @@ If you've ever had that "wait, wasn't there a song here?" feeling, this project 
 **YT Playlist Vault** takes periodic "snapshots" of your YouTube playlists and builds a history of changes over time. With that, it can:
 
 - **Capture the state of a playlist** at regular intervals (e.g. weekly), with no manual effort required.
-- **Detect diffs** between two consecutive snapshot (what was added, what was removed).
+- **Detect diffs** between two consecutive snapshots (what was added, removed, or moved).
 - **Investigate why something disappeared**. When a track vanishes, the system queries the video's status via the API and tries to identify the cause (private, removed by owner, copyright claim, region restriction).
 - **Tell the story of a playlist**. A browsable timeline of everything that has happened to it since you started monitoring it.
 
 ## How it works (architecture overview)
 
 ```
-YouTube Data     ◄──┤ Spring Boot App │──►  PostgreSQL
-API v3 (OAuth2)     │                 │
-                    │- Scheduler      │
-                    │- Snapshot Svc   │
-                    │- Diff Engine    │
-                    │- Obituary Svc   │
-                    └─────────────────┘
-                            │
-                            ▼
-                        REST API
-                        Dashboard
+Google OAuth2 / YouTube Data API v3
+                 |
+                 v
+            Spring Boot API <----> PostgreSQL
+                 |
+                 | scheduled capture requests
+                 v
+              RabbitMQ
+                 |
+                 v
+     Snapshot consumer / Diff engine
 ```
 
 ### Main flow
 
 1. The user authenticates via OAuth2 (Google) and grants read access to their playlists.
 2. The user selects which playlists to monitor.
-3. A scheduled job (`@Scheduled`) runs periodically and, for each monitored playlist, fetches its current state via `playlistItems.list`.
-4. The current snapshot is compared against the most recent previous snapshot → generates a `Diff` record (items added, items removed).
-5. For each removed item, the system queries `videos.list` to try to understand why (private video, removed, blocked by region/copyright) and attaches that information to the record (the "obituary").
-6. The user can query the full timeline of any monitored playlist and see its complete evolution.
+3. A scheduled job (`@Scheduled`) runs periodically and publishes one capture request for each active monitored playlist to RabbitMQ.
+4. A RabbitMQ consumer refreshes the user's OAuth authorization when necessary, fetches the playlist state through `playlistItems.list`, and persists a snapshot only when content changed.
+5. The current snapshot is compared against the most recent previous snapshot to generate a diff with added, removed, and moved items.
+6. For each removed item, the system will query `videos.list` to try to understand why (private video, removed, blocked by region/copyright) and attach that information to the record (the "obituary").
+7. The user can query the full timeline of any monitored playlist and see its complete evolution.
 
 ## Data model (high level)
 
@@ -58,20 +59,26 @@ API v3 (OAuth2)     │                 │
 - **Java 21 + Spring Boot** - application core
 - **Spring Security + OAuth2 Client** - authentication via Google
 - **Spring Data JPA + PostgreSQL** - persistence
+- **Flyway** - versioned database migrations
 - **Spring Scheduling** - periodic snapshot capture
+- **Spring AMQP + RabbitMQ** - asynchronous scheduled capture processing, retries, and dead-letter queue
 - **YouTube Data API v3** - data source (free, no subscription required)
-- **Docker Compose** - local environment (app + database)
+- **springdoc-openapi** - interactive API documentation with Swagger UI
+- **Docker Compose** - local PostgreSQL and RabbitMQ environment
 
 ## Roadmap
 
-- [ ] Entity modeling and relationships
-- [ ] OAuth2 integration with Google + YouTube scope
-- [ ] Snapshot capture service (API call + persistence)
-- [ ] Diff engine between snapshots
+- [x] Entity modeling and relationships
+- [x] OAuth2 integration with Google + YouTube scope
+- [x] Playlist discovery and monitored-playlist management
+- [x] Snapshot capture service (API call + persistence)
+- [x] Diff engine between snapshots, including item order changes
+- [x] Snapshot timeline, details, and latest-diff REST endpoints
+- [x] Scheduled asynchronous captures with RabbitMQ, retries, and dead-letter queue
+- [x] OpenAPI / Swagger UI documentation
 - [ ] "Obituary" service (video removal status lookup)
-- [ ] REST endpoint for per-playlist timeline
 - [ ] Simple dashboard to visualize the timeline
 
 ## Project status
 
-🚧 Under construction — this README documents the design phase.
+Under active development. The backend supports Google OAuth2, playlist selection, monitored snapshots, diffs, scheduled asynchronous capture, and OpenAPI documentation. Remaining work is focused on removal investigation and a dashboard.
