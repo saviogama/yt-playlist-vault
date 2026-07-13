@@ -55,6 +55,34 @@ class SnapshotDiffCalculatorTest {
             });
   }
 
+  @Test
+  void shouldTreatDistinctPlaylistItemsAsSeparateEntriesWhenTheirMediaMetadataMatches() {
+    MonitoredPlaylist playlist =
+        new MonitoredPlaylist(
+            new User("google-subject", "user@example.com", "User Example"),
+            "playlist-id",
+            "Playlist",
+            "Description",
+            null);
+    Snapshot previousSnapshot = new Snapshot(playlist, Instant.parse("2026-07-10T10:00:00Z"), 2);
+    Snapshot currentSnapshot = new Snapshot(playlist, Instant.parse("2026-07-10T10:05:00Z"), 2);
+
+    SnapshotDiffResponse diff =
+        snapshotDiffCalculator.calculate(
+            currentSnapshot,
+            previousSnapshot,
+            List.of(
+                createItem(currentSnapshot, "playlist-item-b", "Same Track", 0),
+                createItem(currentSnapshot, "playlist-item-a", "Same Track", 1)),
+            List.of(
+                createItem(previousSnapshot, "playlist-item-a", "Same Track", 0),
+                createItem(previousSnapshot, "playlist-item-b", "Same Track", 1)));
+
+    assertThat(diff.addedItems()).isEmpty();
+    assertThat(diff.removedItems()).isEmpty();
+    assertThat(diff.movedItems()).hasSize(2);
+  }
+
   private SnapshotItem createItem(
       Snapshot snapshot, String providerItemId, String title, int position) {
     return new SnapshotItem(

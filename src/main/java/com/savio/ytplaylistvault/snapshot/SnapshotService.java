@@ -147,6 +147,18 @@ public class SnapshotService {
     return diffPreviousSnapshot(snapshotId);
   }
 
+  @Transactional(readOnly = true)
+  public SnapshotDiffResponse diffLatestSnapshotForUser(User user, UUID playlistId) {
+    MonitoredPlaylist playlist = getPlaylistForUserOrThrow(playlistId, user);
+    Snapshot latestSnapshot =
+        snapshotRepository
+            .findFirstByMonitoredPlaylistOrderByCapturedAtDesc(playlist)
+            .orElseThrow(
+                () -> new ResourceNotFoundException("No snapshots found for this playlist"));
+
+    return diffPreviousSnapshot(latestSnapshot.getId());
+  }
+
   private SnapshotItem createSnapshotItem(Snapshot snapshot, CreateSnapshotItemRequest request) {
     return new SnapshotItem(
         snapshot,

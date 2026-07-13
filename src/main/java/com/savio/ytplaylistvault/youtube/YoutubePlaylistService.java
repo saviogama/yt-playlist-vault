@@ -83,7 +83,7 @@ public class YoutubePlaylistService {
       for (JsonNode item : response.path("items")) {
         JsonNode snippet = item.path("snippet");
 
-        String providerItemId = snippet.path("resourceId").path("videoId").asString();
+        String providerItemId = item.path("id").asString();
         String title = snippet.path("title").asString();
         String creatorName = snippet.path("videoOwnerChannelTitle").asString(null);
         String thumbnailUrl = snippet.path("thumbnails").path("default").path("url").asString(null);
