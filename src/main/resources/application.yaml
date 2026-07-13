@@ -7,6 +7,11 @@ spring:
     username: yt_playlist_vault
     password: yt_playlist_vault
 
+  data:
+    redis:
+      repositories:
+        enabled: false
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -37,6 +42,9 @@ spring:
           max-retries: 3
 
 app:
+  cache:
+    youtube-playlists:
+      ttl: PT5M
   snapshot-scheduler:
     enabled: true
     fixed-delay: PT72H

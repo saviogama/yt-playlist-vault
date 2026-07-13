@@ -4,6 +4,11 @@ spring:
     username: yt_playlist_vault
     password: yt_playlist_vault
 
+  data:
+    redis:
+      repositories:
+        enabled: false
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -22,6 +27,9 @@ spring:
     listener:
       simple:
         auto-startup: false
+
+  cache:
+    type: none
 
 app:
   snapshot-scheduler:

@@ -47,6 +47,6 @@ public class YoutubePlaylistController {
 
     String accessToken = authorizedClient.getAccessToken().getTokenValue();
 
-    return youtubePlaylistService.listPlaylists(accessToken);
+    return youtubePlaylistService.listPlaylists(authentication.getName(), accessToken);
   }
 }
