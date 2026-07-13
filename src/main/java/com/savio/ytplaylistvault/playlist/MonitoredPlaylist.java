@@ -3,6 +3,8 @@ package com.savio.ytplaylistvault.playlist;
 import com.savio.ytplaylistvault.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -32,6 +34,19 @@ public class MonitoredPlaylist {
 
   private String thumbnailUrl;
 
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private MonitoringStatus monitoringStatus;
+
+  private Instant lastCheckedAt;
+
+  private Instant lastSnapshotAt;
+
+  private Instant lastChangeDetectedAt;
+
+  @Column(nullable = false)
+  private int snapshotCount;
+
   @Column(nullable = false)
   private Instant createdAt;
 
@@ -48,6 +63,7 @@ public class MonitoredPlaylist {
     this.title = title;
     this.description = description;
     this.thumbnailUrl = thumbnailUrl;
+    this.monitoringStatus = MonitoringStatus.ACTIVE;
   }
 
   @PrePersist
@@ -92,5 +108,41 @@ public class MonitoredPlaylist {
 
   public Instant getUpdatedAt() {
     return updatedAt;
+  }
+
+  public MonitoringStatus getMonitoringStatus() {
+    return monitoringStatus;
+  }
+
+  public Instant getLastCheckedAt() {
+    return lastCheckedAt;
+  }
+
+  public Instant getLastSnapshotAt() {
+    return lastSnapshotAt;
+  }
+
+  public Instant getLastChangeDetectedAt() {
+    return lastChangeDetectedAt;
+  }
+
+  public int getSnapshotCount() {
+    return snapshotCount;
+  }
+
+  public void recordCapture(
+      Instant checkedAt, boolean createdSnapshot, boolean hadPreviousSnapshot) {
+    this.lastCheckedAt = checkedAt;
+
+    if (!createdSnapshot) {
+      return;
+    }
+
+    this.lastSnapshotAt = checkedAt;
+    this.snapshotCount++;
+
+    if (hadPreviousSnapshot) {
+      this.lastChangeDetectedAt = checkedAt;
+    }
   }
 }
