@@ -62,6 +62,7 @@ Google OAuth2 / YouTube Data API v3
 - **Flyway** - versioned database migrations
 - **Spring Scheduling** - periodic snapshot capture
 - **Spring AMQP + RabbitMQ** - asynchronous scheduled capture processing, retries, and dead-letter queue
+- **Spring Cache + Redis** - per-user cache for YouTube playlist discovery
 - **YouTube Data API v3** - data source (free, no subscription required)
 - **springdoc-openapi** - interactive API documentation with Swagger UI
 - **Docker Compose** - local PostgreSQL and RabbitMQ environment
@@ -75,6 +76,7 @@ Google OAuth2 / YouTube Data API v3
 - [x] Diff engine between snapshots, including item order changes
 - [x] Snapshot timeline, details, and latest-diff REST endpoints
 - [x] Scheduled asynchronous captures with RabbitMQ, retries, and dead-letter queue
+- [x] Redis cache for YouTube playlist discovery
 - [x] OpenAPI / Swagger UI documentation
 - [ ] "Obituary" service (video removal status lookup)
 - [ ] Simple dashboard to visualize the timeline

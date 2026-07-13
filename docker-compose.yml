@@ -22,7 +22,16 @@ services:
       RABBITMQ_DEFAULT_VHOST: yt_playlist_vault
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+  redis:
+    image: redis:8.0-alpine
+    container_name: yt-playlist-vault-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
 
 volumes:
   postgres_data:
   rabbitmq_data:
+  redis_data:
